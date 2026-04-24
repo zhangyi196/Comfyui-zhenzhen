@@ -8074,11 +8074,11 @@ class Comfly_gpt_image_2_S2A:
 
                 # 异步模式：轮询任务状态直到完成
                 print(f"[Comfly_gpt_image_2_S2A] Waiting for task completion: {returned_task_id}")
-                max_attempts = 60  # 最多等待10分钟(每10秒查询一次)
+                max_attempts = 60  # 最多等待5分钟(每5秒查询一次)
                 attempt = 0
 
                 while attempt < max_attempts:
-                    time.sleep(10)
+                    time.sleep(5)
                     attempt += 1
 
                     try:
@@ -17676,11 +17676,11 @@ class Comfly_nano_banana2_edit_S2A:
                 
                 # 异步模式：轮询任务状态直到完成
                 print(f"Waiting for task completion: {returned_task_id}")
-                max_attempts = 60  # 最多等待10分钟(每10秒查询一次)
+                max_attempts = 60  # 最多等待5分钟(每5秒查询一次)
                 attempt = 0
                 
                 while attempt < max_attempts:
-                    time.sleep(10)  # 等待10秒
+                    time.sleep(5)  # 等待5秒
                     attempt += 1
                     
                     try:
