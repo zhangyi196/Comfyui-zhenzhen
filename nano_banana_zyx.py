@@ -4,6 +4,7 @@ import os
 import time
 from io import BytesIO
 
+import comfy.model_management
 import comfy.utils
 import requests
 import torch
@@ -38,7 +39,7 @@ class Comfly_nano_banana2_edit_ZYX:
             "required": {
                 "prompt": ("STRING", {"multiline": True}),
                 "mode": (["text2img", "img2img"], {"default": "text2img"}),
-                "model": (["nano-banana-2", "nano-banana-pro", "nano-banana-pro-2k", "nano-banana-pro-4k"], {"default": "nano-banana-pro"}),
+                "model": (["gemini-3.1-flash-image-preview", "nano-banana-pro", "gemini-3-pro-image-preview"], {"default": "nano-banana-pro"}),
                 "aspect_ratio": (["auto", "16:9", "4:3", "4:5", "3:2", "1:1", "2:3", "3:4", "5:4", "9:16", "21:9"], {"default": "auto"}),
                 "image_size": (["1K", "2K", "4K"], {"default": "2K"}),
             },
@@ -78,6 +79,44 @@ class Comfly_nano_banana2_edit_ZYX:
         return {
             "Authorization": f"Bearer {self.api_key}"
         }
+
+    def _check_interrupted(self):
+        comfy.model_management.throw_exception_if_processing_interrupted()
+
+    def _interruptible_sleep(self, seconds):
+        remaining = max(0.0, float(seconds))
+        while remaining > 0:
+            self._check_interrupted()
+            sleep_slice = min(0.2, remaining)
+            time.sleep(sleep_slice)
+            remaining -= sleep_slice
+            self._check_interrupted()
+
+    def _cancel_remote_task(self, task_id):
+        if not task_id:
+            return False
+
+        headers = self.get_headers()
+        cancel_attempts = [
+            ("POST", f"{baseurl}/v1/images/tasks/{task_id}/cancel"),
+            ("DELETE", f"{baseurl}/v1/images/tasks/{task_id}"),
+            ("POST", f"{baseurl}/v1/tasks/{task_id}/cancel"),
+            ("DELETE", f"{baseurl}/v1/tasks/{task_id}"),
+        ]
+
+        for method, url in cancel_attempts:
+            try:
+                response = requests.request(method, url, headers=headers, timeout=10)
+                if 200 <= response.status_code < 300:
+                    print(f"Remote task cancel succeeded via {method} {url}")
+                    return True
+                print(f"Remote task cancel failed via {method} {url}: {response.status_code} - {response.text}")
+            except comfy.model_management.InterruptProcessingException:
+                raise
+            except Exception as e:
+                print(f"Remote task cancel request failed via {method} {url}: {str(e)}")
+
+        return False
 
     def image_to_base64(self, image_tensor):
         """Convert tensor to base64 string"""
@@ -132,6 +171,7 @@ class Comfly_nano_banana2_edit_ZYX:
             return (blank_tensor, "", "", json.dumps({"status": "failed", "message": error_message}))
 
         try:
+            self._check_interrupted()
             pbar = comfy.utils.ProgressBar(100)
             pbar.update_absolute(10)
 
@@ -164,12 +204,13 @@ class Comfly_nano_banana2_edit_ZYX:
                 params = {"async": "true"}
 
                 print(f"Submitting text2img async request: {payload}")
+                self._check_interrupted()
                 response = requests.post(
                     f"{baseurl}/v1/images/generations",
                     headers=headers,
                     params=params,
                     json=payload,
-                    timeout=self.timeout,
+                    timeout=(10, self.timeout),
                 )
             else:
                 headers = self.get_headers()
@@ -207,15 +248,17 @@ class Comfly_nano_banana2_edit_ZYX:
                 params = {"async": "true"}
 
                 print(f"Submitting img2img async request with {image_count} images")
+                self._check_interrupted()
                 response = requests.post(
                     f"{baseurl}/v1/images/edits",
                     headers=headers,
                     params=params,
                     data=data,
                     files=files,
-                    timeout=self.timeout,
+                    timeout=(10, self.timeout),
                 )
 
+            self._check_interrupted()
             pbar.update_absolute(30)
 
             if response.status_code != 200:
@@ -255,103 +298,117 @@ class Comfly_nano_banana2_edit_ZYX:
                 max_attempts = 60
                 attempt = 0
 
-                while attempt < max_attempts:
-                    time.sleep(5)
-                    attempt += 1
+                try:
+                    while attempt < max_attempts:
+                        self._check_interrupted()
+                        self._interruptible_sleep(5)
+                        attempt += 1
 
-                    try:
-                        query_url = f"{baseurl}/v1/images/tasks/{returned_task_id}"
-                        query_response = requests.get(
-                            query_url,
-                            headers=headers,
-                            timeout=self.timeout,
-                        )
+                        try:
+                            query_url = f"{baseurl}/v1/images/tasks/{returned_task_id}"
+                            self._check_interrupted()
+                            query_response = requests.get(
+                                query_url,
+                                headers=headers,
+                                timeout=(10, 30),
+                            )
+                            self._check_interrupted()
 
-                        if query_response.status_code == 200:
-                            query_result = query_response.json()
-                            actual_status = "unknown"
-                            actual_data = None
+                            if query_response.status_code == 200:
+                                query_result = query_response.json()
+                                actual_status = "unknown"
+                                actual_data = None
 
-                            if "data" in query_result and isinstance(query_result["data"], dict):
-                                actual_status = query_result["data"].get("status", "unknown")
-                                actual_data = query_result["data"].get("data")
+                                if "data" in query_result and isinstance(query_result["data"], dict):
+                                    actual_status = query_result["data"].get("status", "unknown")
+                                    actual_data = query_result["data"].get("data")
 
-                            print(f"Task status (attempt {attempt}): {actual_status}")
+                                print(f"Task status (attempt {attempt}): {actual_status}")
 
-                            if actual_status == "completed" or actual_status == "success" or actual_status == "done" or actual_status == "finished" or actual_status == "SUCCESS" or (actual_status == "unknown" and actual_data):
-                                if actual_data:
-                                    generated_tensors = []
-                                    image_urls = []
+                                if actual_status == "completed" or actual_status == "success" or actual_status == "done" or actual_status == "finished" or actual_status == "SUCCESS" or (actual_status == "unknown" and actual_data):
+                                    if actual_data:
+                                        generated_tensors = []
+                                        image_urls = []
 
-                                    data_items = actual_data.get("data", []) if isinstance(actual_data, dict) else actual_data
-                                    if not isinstance(data_items, list):
-                                        data_items = [data_items]
+                                        data_items = actual_data.get("data", []) if isinstance(actual_data, dict) else actual_data
+                                        if not isinstance(data_items, list):
+                                            data_items = [data_items]
 
-                                    for item in data_items:
-                                        try:
-                                            if "b64_json" in item and item["b64_json"]:
-                                                image_data = base64.b64decode(item["b64_json"])
-                                                image_stream = BytesIO(image_data)
-                                                generated_image = Image.open(image_stream)
-                                                generated_image.verify()
-                                                image_stream.seek(0)
-                                                generated_image = Image.open(image_stream)
-                                                if generated_image.mode != "RGB":
-                                                    generated_image = generated_image.convert("RGB")
-                                                generated_tensor = pil2tensor(generated_image)
-                                                generated_tensors.append(generated_tensor)
-                                            elif "url" in item and item["url"]:
-                                                image_url = item["url"]
-                                                image_urls.append(image_url)
-                                                img_response = requests.get(image_url, timeout=self.timeout)
-                                                img_response.raise_for_status()
-                                                image_stream = BytesIO(img_response.content)
-                                                generated_image = Image.open(image_stream)
-                                                generated_image.verify()
-                                                image_stream.seek(0)
-                                                generated_image = Image.open(image_stream)
-                                                if generated_image.mode != "RGB":
-                                                    generated_image = generated_image.convert("RGB")
-                                                generated_tensor = pil2tensor(generated_image)
-                                                generated_tensors.append(generated_tensor)
-                                        except Exception as e:
-                                            print(f"Error processing image item: {str(e)}")
-                                            continue
+                                        for item in data_items:
+                                            try:
+                                                if "b64_json" in item and item["b64_json"]:
+                                                    image_data = base64.b64decode(item["b64_json"])
+                                                    image_stream = BytesIO(image_data)
+                                                    generated_image = Image.open(image_stream)
+                                                    generated_image.verify()
+                                                    image_stream.seek(0)
+                                                    generated_image = Image.open(image_stream)
+                                                    if generated_image.mode != "RGB":
+                                                        generated_image = generated_image.convert("RGB")
+                                                    generated_tensor = pil2tensor(generated_image)
+                                                    generated_tensors.append(generated_tensor)
+                                                elif "url" in item and item["url"]:
+                                                    self._check_interrupted()
+                                                    image_url = item["url"]
+                                                    image_urls.append(image_url)
+                                                    img_response = requests.get(image_url, timeout=(10, 60))
+                                                    self._check_interrupted()
+                                                    img_response.raise_for_status()
+                                                    image_stream = BytesIO(img_response.content)
+                                                    generated_image = Image.open(image_stream)
+                                                    generated_image.verify()
+                                                    image_stream.seek(0)
+                                                    generated_image = Image.open(image_stream)
+                                                    if generated_image.mode != "RGB":
+                                                        generated_image = generated_image.convert("RGB")
+                                                    generated_tensor = pil2tensor(generated_image)
+                                                    generated_tensors.append(generated_tensor)
+                                            except comfy.model_management.InterruptProcessingException:
+                                                raise
+                                            except Exception as e:
+                                                print(f"Error processing image item: {str(e)}")
+                                                continue
 
-                                    if generated_tensors:
-                                        combined_tensor = torch.cat(generated_tensors, dim=0)
-                                        first_image_url = image_urls[0] if image_urls else ""
-                                        final_result_info = {
-                                            "status": "success",
-                                            "task_id": returned_task_id,
-                                            "model": model,
-                                            "mode": mode,
-                                            "prompt": prompt,
-                                            "aspect_ratio": aspect_ratio,
-                                            "image_size": image_size if model == "nano-banana-2" or model == "nano-banana-pro" else None,
-                                            "seed": seed if seed > 0 else None,
-                                            "images_count": len(generated_tensors),
-                                            "image_url": first_image_url,
-                                            "all_urls": image_urls,
-                                        }
-                                        pbar.update_absolute(100)
-                                        return (combined_tensor, first_image_url, returned_task_id, json.dumps(final_result_info))
+                                        if generated_tensors:
+                                            combined_tensor = torch.cat(generated_tensors, dim=0)
+                                            first_image_url = image_urls[0] if image_urls else ""
+                                            final_result_info = {
+                                                "status": "success",
+                                                "task_id": returned_task_id,
+                                                "model": model,
+                                                "mode": mode,
+                                                "prompt": prompt,
+                                                "aspect_ratio": aspect_ratio,
+                                                "image_size": image_size if model == "nano-banana-2" or model == "nano-banana-pro" else None,
+                                                "seed": seed if seed > 0 else None,
+                                                "images_count": len(generated_tensors),
+                                                "image_url": first_image_url,
+                                                "all_urls": image_urls,
+                                            }
+                                            pbar.update_absolute(100)
+                                            return (combined_tensor, first_image_url, returned_task_id, json.dumps(final_result_info))
 
-                            elif actual_status == "failed" or actual_status == "error" or actual_status == "FAILURE":
-                                error_msg = query_result.get("error", "Unknown error")
-                                print(f"Task failed: {error_msg}")
-                                blank_image = Image.new("RGB", (1024, 1024), color="red")
-                                blank_tensor = pil2tensor(blank_image)
-                                pbar.update_absolute(100)
-                                if not skip_error:
-                                    raise RuntimeError(f"[Comfly_nano_banana2_edit_ZYX] {error_msg}")
-                                return (blank_tensor, "", "", json.dumps({"status": "failed", "task_id": returned_task_id, "message": error_msg}))
+                                elif actual_status == "failed" or actual_status == "error" or actual_status == "FAILURE":
+                                    error_msg = query_result.get("error", "Unknown error")
+                                    print(f"Task failed: {error_msg}")
+                                    blank_image = Image.new("RGB", (1024, 1024), color="red")
+                                    blank_tensor = pil2tensor(blank_image)
+                                    pbar.update_absolute(100)
+                                    if not skip_error:
+                                        raise RuntimeError(f"[Comfly_nano_banana2_edit_ZYX] {error_msg}")
+                                    return (blank_tensor, "", "", json.dumps({"status": "failed", "task_id": returned_task_id, "message": error_msg}))
 
-                        else:
-                            print(f"Query failed with status {query_response.status_code}")
+                            else:
+                                print(f"Query failed with status {query_response.status_code}")
 
-                    except Exception as e:
-                        print(f"Error querying task status: {str(e)}")
+                        except comfy.model_management.InterruptProcessingException:
+                            raise
+                        except Exception as e:
+                            print(f"Error querying task status: {str(e)}")
+                except comfy.model_management.InterruptProcessingException:
+                    print(f"Processing interrupted, cancelling remote task: {returned_task_id}")
+                    self._cancel_remote_task(returned_task_id)
+                    raise
 
                 print("Task polling timed out")
                 blank_image = Image.new("RGB", (512, 512), color="yellow")
@@ -384,6 +441,7 @@ class Comfly_nano_banana2_edit_ZYX:
 
                 for i, item in enumerate(data_items):
                     try:
+                        self._check_interrupted()
                         pbar.update_absolute(50 + (i + 1) * 40 // len(data_items))
 
                         if "b64_json" in item and item["b64_json"]:
@@ -399,10 +457,12 @@ class Comfly_nano_banana2_edit_ZYX:
                             generated_tensors.append(generated_tensor)
                             response_info += f"Image {i + 1}: Base64 data\n"
                         elif "url" in item and item["url"]:
+                            self._check_interrupted()
                             image_url = item["url"]
                             image_urls.append(image_url)
                             response_info += f"Image {i + 1}: {image_url}\n"
-                            img_response = requests.get(image_url, timeout=self.timeout)
+                            img_response = requests.get(image_url, timeout=(10, 60))
+                            self._check_interrupted()
                             img_response.raise_for_status()
                             image_stream = BytesIO(img_response.content)
                             generated_image = Image.open(image_stream)
@@ -413,6 +473,9 @@ class Comfly_nano_banana2_edit_ZYX:
                                 generated_image = generated_image.convert("RGB")
                             generated_tensor = pil2tensor(generated_image)
                             generated_tensors.append(generated_tensor)
+                        self._check_interrupted()
+                    except comfy.model_management.InterruptProcessingException:
+                        raise
                     except Exception as e:
                         print(f"Error processing image item {i}: {str(e)}")
                         continue
@@ -462,6 +525,8 @@ class Comfly_nano_banana2_edit_ZYX:
                     raise RuntimeError(f"[Comfly_nano_banana2_edit_ZYX] {error_message}")
                 return (blank_tensor, "", "", json.dumps({"status": "failed", "message": error_message}))
 
+        except comfy.model_management.InterruptProcessingException:
+            raise
         except Exception as e:
             error_message = f"Error in image generation: {str(e)}"
             print(error_message)
@@ -476,16 +541,19 @@ class Comfly_nano_banana2_edit_ZYX:
 
     def _query_task_status(self, task_id, pbar):
         try:
+            self._check_interrupted()
             headers = self.get_headers()
             headers["Content-Type"] = "application/json"
 
             query_url = f"{baseurl}/v1/images/tasks/{task_id}"
             print(f"Querying task status: {query_url}")
+            self._check_interrupted()
             response = requests.get(
                 query_url,
                 headers=headers,
-                timeout=self.timeout,
+                timeout=(10, 30),
             )
+            self._check_interrupted()
 
             pbar.update_absolute(50)
 
@@ -520,6 +588,7 @@ class Comfly_nano_banana2_edit_ZYX:
 
                     for i, item in enumerate(data_items):
                         try:
+                            self._check_interrupted()
                             pbar.update_absolute(50 + (i + 1) * 40 // len(data_items))
 
                             if "b64_json" in item and item["b64_json"]:
@@ -535,10 +604,12 @@ class Comfly_nano_banana2_edit_ZYX:
                                 generated_tensors.append(generated_tensor)
                                 response_info += f"Image {i + 1}: Base64 data\n"
                             elif "url" in item and item["url"]:
+                                self._check_interrupted()
                                 image_url = item["url"]
                                 image_urls.append(image_url)
                                 response_info += f"Image {i + 1}: {image_url}\n"
-                                img_response = requests.get(image_url, timeout=self.timeout)
+                                img_response = requests.get(image_url, timeout=(10, 60))
+                                self._check_interrupted()
                                 img_response.raise_for_status()
                                 image_stream = BytesIO(img_response.content)
                                 generated_image = Image.open(image_stream)
@@ -549,6 +620,9 @@ class Comfly_nano_banana2_edit_ZYX:
                                     generated_image = generated_image.convert("RGB")
                                 generated_tensor = pil2tensor(generated_image)
                                 generated_tensors.append(generated_tensor)
+                            self._check_interrupted()
+                        except comfy.model_management.InterruptProcessingException:
+                            raise
                         except Exception as e:
                             print(f"Error processing image item {i}: {str(e)}")
                             continue
@@ -591,6 +665,8 @@ class Comfly_nano_banana2_edit_ZYX:
                 pbar.update_absolute(100)
                 return (blank_tensor, "", "", json.dumps({"status": actual_status, "task_id": task_id, "message": f"Unknown task status: {actual_status}", "raw_response": result}))
 
+        except comfy.model_management.InterruptProcessingException:
+            raise
         except Exception as e:
             error_message = f"Error querying task status: {str(e)}"
             print(error_message)
