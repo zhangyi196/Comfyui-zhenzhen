@@ -37,6 +37,7 @@ from comfy_api.input_impl import VideoFromFile
 from comfy_api.util import VideoComponents
 from comfy_api.input_impl import VideoFromComponents
 from fractions import Fraction
+from .nano_banana_zyx import Comfly_nano_banana2_edit_ZYX
 
 # For LLM API functionality
 try:
@@ -17749,7 +17750,7 @@ class Comfly_nano_banana2_edit_S2A:
                 attempt = 0
                 
                 while attempt < max_attempts:
-                    time.sleep(10)  # 等待10秒
+                    time.sleep(5)  # 等待5秒
                     attempt += 1
                     
                     try:
@@ -20879,7 +20880,8 @@ NODE_CLASS_MAPPINGS = {
     "Comfly_nano_banana_fal": Comfly_nano_banana_fal,
     "Comfly_nano_banana_edit": Comfly_nano_banana_edit,
     "Comfly_nano_banana2_edit": Comfly_nano_banana2_edit,
-    "Comfly_nano_banana2_edit_S2A": Comfly_nano_banana2_edit_S2A,
+    "Comfly_nano_banana2_edit_ZYX": Comfly_nano_banana2_edit_ZYX,
+    "Comfly_nano_banana2_edit_S2A": Comfly_nano_banana2_edit_ZYX,
     "Comfly_gemini_3_1_flash_image_edit_S2A": Comfly_gemini_3_1_flash_image_edit_S2A,
     "Comfly_Z_image_turbo": Comfly_Z_image_turbo,
     "ComflyGrok3VideoApi": ComflyGrok3VideoApi,
@@ -20956,6 +20958,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Comfly_nano_banana_fal": "Zhenzhen_nano_banana_fal",
     "Comfly_nano_banana_edit": "Zhenzhen_nano_banana_edit",
     "Comfly_nano_banana2_edit": "Zhenzhen_nano_banana2_edit",
+    "Comfly_nano_banana2_edit_ZYX": "Zhenzhen_nano_banana2_edit_ZYX",
     "Comfly_nano_banana2_edit_S2A": "Zhenzhen_nano_banana2_edit_S2A",
     "Comfly_gemini_3_1_flash_image_edit_S2A": "Zhenzhen Gemini 3.1 Flash Image Edit S2A",
     "ComflyGrok3VideoApi": "Zhenzhen Grok3 Video",
