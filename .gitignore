@@ -1,0 +1,46 @@
+# Python cache and tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local secrets and runtime config
+.env
+.env.*
+Comflyapi.json
+Comflyapi.*.json
+!Comflyapi.example.json
+
+# Build and packaged artifacts
+build/
+dist/
+*.egg-info/
+*.zip
+
+# Editor and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local/private workflow exports containing real keys or signed URLs.
+workflow/zhenzhen-nano-banana-1.json
+workflow/zhenzhen-Nano-Banana-2-Edit-Multi-I2I-4K.json
+workflow/zhenzhen-Nano-Banana-2-Edit-T2I-4K.json
+workflow/zhenzhen-nano-banana-2.json
+workflow/zhenzhen-nano-banana-V2(Gemini-3-pro-image-preview).json
+workflow/zhenzhen-sora-2-pro-25s-I2V-final.json
+workflow/zhenzhen-sora2-chat-fast.json
+workflow/zhenzhen-suno-v5-Song-Extend.json
+workflow/zhenzhen-video-analyze.json
+workflow/（视频资产）Seedance2.0+真人ID资产库提取(贞贞的AI工坊).json
+workflow/（音频资产）Seedance2.0+真人ID资产库提取(贞贞的AI工坊).json
