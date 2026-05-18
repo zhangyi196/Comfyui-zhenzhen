@@ -27,6 +27,7 @@ import threading
 import concurrent.futures
 import copy
 from .utils import pil2tensor, tensor2pil
+from .nano_banana_zyx import Comfly_nano_banana2_edit_ZYX
 from comfy.utils import common_upscale
 from comfy.comfy_types import IO
 from typing import Optional, Any
@@ -23110,7 +23111,8 @@ NODE_CLASS_MAPPINGS = {
     "Comfly_nano_banana_pro_fal": Comfly_nano_banana_pro_fal,
     "Comfly_nano_banana_2_fal": Comfly_nano_banana_2_fal,
     "Comfly_grok_video_fal": Comfly_grok_video_fal,
-    "Comfly_seedream_v5_fal": Comfly_seedream_v5_fal
+    "Comfly_seedream_v5_fal": Comfly_seedream_v5_fal,
+    "Comfly_nano_banana2_edit_ZYX": Comfly_nano_banana2_edit_ZYX
 }
 
 
@@ -23194,7 +23196,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Comfly_nano_banana_pro_fal": "Zhenzhen Nano Banana Pro Edit Fal",
     "Comfly_nano_banana_2_fal": "Zhenzhen Nano Banana 2 Edit Fal",
     "Comfly_grok_video_fal": "Zhenzhen Grok Video Fal",
-    "Comfly_seedream_v5_fal": "Zhenzhen Seedream V5 Lite Edit Fal"
+    "Comfly_seedream_v5_fal": "Zhenzhen Seedream V5 Lite Edit Fal",
+    "Comfly_nano_banana2_edit_ZYX": "Zhenzhen Nano Banana 2 Edit ZYX"
 }
 
 # Aliyun WanX 2.6 API Node

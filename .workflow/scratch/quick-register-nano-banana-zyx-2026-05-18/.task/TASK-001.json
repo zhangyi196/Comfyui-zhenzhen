@@ -1,0 +1,16 @@
+{
+  "id": "TASK-001",
+  "title": "在 Comfly.py 中注册 Comfly_nano_banana2_edit_ZYX 节点",
+  "type": "implementation",
+  "status": "pending",
+  "files": ["Comfly.py"],
+  "read_first": ["Comfly.py:23034-23198"],
+  "convergence": {
+    "criteria": [
+      "Comfly.py contains 'from .nano_banana_zyx import Comfly_nano_banana2_edit_ZYX'",
+      "NODE_CLASS_MAPPINGS dict contains '\"Comfly_nano_banana2_edit_ZYX\": Comfly_nano_banana2_edit_ZYX'",
+      "NODE_DISPLAY_NAME_MAPPINGS dict contains '\"Comfly_nano_banana2_edit_ZYX\": \"Zhenzhen Nano Banana 2 Edit ZYX\"'"
+    ]
+  },
+  "action": "三处编辑 Comfly.py: (1) 头部添加 from .nano_banana_zyx import Comfly_nano_banana2_edit_ZYX (2) NODE_CLASS_MAPPINGS 末尾追加注册 (3) NODE_DISPLAY_NAME_MAPPINGS 末尾追加注册"
+}

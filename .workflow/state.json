@@ -4,8 +4,26 @@
   "status": "idle",
   "current_milestone": null,
   "current_task_id": null,
-  "milestones": [],
-  "artifacts": [],
+  "milestones": [
+    {
+      "phase": 1,
+      "name": "节点注册",
+      "status": "completed",
+      "description": "在 Comfly.py 中 import 并注册 Comfly_nano_banana2_edit_ZYX"
+    }
+  ],
+  "quick_tasks": [
+    {
+      "id": "quick-register-nano-banana-zyx-2026-05-18",
+      "description": "接入 nano_banana_zyx 节点到 ComfyUI",
+      "completed_at": "2026-05-18T11:55:00+08:00",
+      "directory": ".workflow/scratch/quick-register-nano-banana-zyx-2026-05-18",
+      "verified": "skipped"
+    }
+  ],
+  "artifacts": [
+    "roadmap.md"
+  ],
   "last_updated": "2026-05-18T11:35:00+08:00",
   "last_codebase_rebuild": "2026-05-18T11:35:00+08:00",
   "last_codebase_rebuild_artifacts": {
