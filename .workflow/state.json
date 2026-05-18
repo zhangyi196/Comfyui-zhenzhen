@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "project_name": "Comfyui-zhenzhen",
-  "status": "idle",
+  "status": "completed",
   "current_milestone": null,
   "current_task_id": null,
   "milestones": [
@@ -24,7 +24,7 @@
   "artifacts": [
     "roadmap.md"
   ],
-  "last_updated": "2026-05-18T11:35:00+08:00",
+  "last_updated": "2026-05-18T12:00:00+08:00",
   "last_codebase_rebuild": "2026-05-18T11:35:00+08:00",
   "last_codebase_rebuild_artifacts": {
     "components": 84,
@@ -37,5 +37,20 @@
     "deferred": []
   },
   "transition_history": [],
-  "milestone_history": []
+  "milestone_history": [
+    {
+      "id": "phase-1-节点注册",
+      "name": "节点注册",
+      "status": "completed",
+      "completed_at": "2026-05-18T12:00:00+08:00",
+      "archive_path": "milestones/phase-1-节点注册/",
+      "archived_artifacts": [
+        {
+          "type": "quick",
+          "id": "quick-register-nano-banana-zyx-2026-05-18",
+          "description": "接入 nano_banana_zyx 节点到 ComfyUI"
+        }
+      ]
+    }
+  ]
 }

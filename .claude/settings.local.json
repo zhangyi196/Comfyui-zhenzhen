@@ -7,7 +7,9 @@
       "Skill(manage-codebase-rebuild:*)",
       "mcp__maestro-tools__edit_file",
       "Skill(spec-setup)",
-      "Skill(spec-setup:*)"
+      "Skill(spec-setup:*)",
+      "Skill(maestro-milestone-complete)",
+      "Skill(maestro-milestone-complete:*)"
     ]
   }
 }
