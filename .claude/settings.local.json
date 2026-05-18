@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__maestro-tools__read_file",
+      "mcp__maestro-tools__write_file",
+      "Skill(manage-codebase-rebuild)",
+      "Skill(manage-codebase-rebuild:*)",
+      "mcp__maestro-tools__edit_file",
+      "Skill(spec-setup)",
+      "Skill(spec-setup:*)"
+    ]
+  }
+}

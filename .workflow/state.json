@@ -1,0 +1,23 @@
+{
+  "version": "2.0",
+  "project_name": "Comfyui-zhenzhen",
+  "status": "idle",
+  "current_milestone": null,
+  "current_task_id": null,
+  "milestones": [],
+  "artifacts": [],
+  "last_updated": "2026-05-18T11:35:00+08:00",
+  "last_codebase_rebuild": "2026-05-18T11:35:00+08:00",
+  "last_codebase_rebuild_artifacts": {
+    "components": 84,
+    "features": 16,
+    "files": ["doc-index.json", "tech-registry/_index.md", "feature-maps/_index.md"]
+  },
+  "accumulated_context": {
+    "key_decisions": [],
+    "blockers": [],
+    "deferred": []
+  },
+  "transition_history": [],
+  "milestone_history": []
+}
